@@ -79,7 +79,7 @@ static bool ParseUrl(char *url, char **proto, char **host, char **port, char **p
   return true;
 }
 
-bool AppProto::Init(char *url)
+bool AppProto::Init(const char *url)
 {
   char *proto = NULL, *host = NULL, *port = NULL, *path = NULL;
   char buf[MAX_URL_PATH];
@@ -107,7 +107,7 @@ bool AppProto::Init(char *url)
   return true;
 }
 
-bool AppProto::ReInit(char *url)
+bool AppProto::ReInit(const char *url)
 {
   _attrs.clear();
   return Init(url);

@@ -33,6 +33,11 @@
 #define ERROR_CODE_OF_CONNECT                   (ERROR_CODE_OFFSET - 9)
 #define ERROR_CODE_OF_PART_DONE                 (ERROR_CODE_OFFSET - 10)
 #define ERROR_CODE_OF_RELOCATION                (ERROR_CODE_OFFSET - 11)
+#define ERROR_CODE_OF_PROTO_NOT_SUPPORTED       (ERROR_CODE_OFFSET - 12)
+#define ERROR_CODE_OF_PROTO_INIT                (ERROR_CODE_OFFSET - 13)
+#define ERROR_CODE_OF_STORE_INIT                (ERROR_CODE_OFFSET - 14)
+#define ERROR_CODE_OF_ADJUST_STATE              (ERROR_CODE_OFFSET - 14)
+#define ERROR_CODE_OF_UPDATE_STATE              (ERROR_CODE_OFFSET - 14)
 
 
 #define APPLICATION_NAME "download-file"
@@ -40,7 +45,7 @@
 
 
 // 日志级别 0-4 分别为: 不写,写错误,写警告,写INFO,写DEBUG
-#define DEBUG_LEVEL 0 // [ 0 - 4 ]              
+#define DEBUG_LEVEL 4 // [ 0 - 4 ]              
 
 
 #if DEBUG_LEVEL > 0
@@ -75,13 +80,16 @@
 #define MIN_INT(a, b) ((a) > (b) ? (b): (a))
 #define STRING_BLANK() " "
 #define STRING_OF(s) #s
+#define EMPTY_STR(s) ((s) == NULL || strlen(s) == 0)
 
 /* 执行shell命令行 */
 void shell_cmd(const char *fmt, ...);
 
 /* 返回指定目录的文件名，指针指向path内地址.*/
-char *file_basename(char *path);
+const char *file_basename(const char *path);
 
+char *StrDup(const char *s);
+void StrFree(char *s);
 
 #endif
 

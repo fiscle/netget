@@ -28,3 +28,8 @@ long AppProtoConnector::SingleExch(char *write_ptr, long size, long *file_size)
   return _proto->SingleExch(_conns, write_ptr, size, file_size);
 }
 
+long AppProtoConnector::Res(Storer *storer, int block_index, long *file_size)
+{
+  return _proto->Res(_conns, storer, block_index, file_size);
+}
+

@@ -84,6 +84,34 @@ static uint32_t get_and_check_ipv4(const char *ip)
 /* 域名转换为ipv4地址 */
 static uint32_t get_ip_by_host(const char *host, char *ip, int size)
 {
+  //struct hostent *pHostent = gethostbyname(host);
+  struct hostent *pHostent = NULL;
+  struct hostent hostent;
+  char buf[2048];
+  int ret;
+
+  if(gethostbyname_r(host, &hostent, buf, sizeof(buf), &pHostent, &ret) != 0)
+    return 0;
+
+  if(pHostent == NULL)
+    return 0;
+
+  switch(pHostent->h_addrtype)
+  {
+    case AF_INET:
+      inet_ntop(pHostent->h_addrtype, pHostent->h_addr, ip, size);
+      return ntohl((uint32_t)((struct in_addr *)pHostent->h_addr)->s_addr);
+      break;
+    default:
+      return 0;
+      break;
+  }
+  return(0);
+}
+
+/*
+static uint32_t get_ip_by_host(const char *host, char *ip, int size)
+{
   struct hostent *pHostent = gethostbyname(host);
   if(pHostent == NULL)
     return(0);
@@ -100,6 +128,7 @@ static uint32_t get_ip_by_host(const char *host, char *ip, int size)
   }
   return(0);
 }
+*/
 
  /* 获取IP地址 */
 static uint32_t get_ip(const char *inAddr, char *buf, int size)

@@ -11,19 +11,19 @@
 
 /* 返回指定目录的文件名，指针指向path内地址.
  */
-char *file_basename(char *path)
+const char *file_basename(const char *path)
 {
-  char *p = NULL;
+  const char *p = NULL;
   if(!path)
-    return (char *)"unknow";
+    return (const char *)"unknow";
   if(path[strlen(path)-1] == '/')
-    path[strlen(path)-1] = 0;
+    return (const char *)"unknow";
   if((p = strrchr(path, '/')))
     ++p;
   else
     p = path;
   if(strlen(p) == 0)
-    return (char *)"unknow";
+    return (const char *)"unknow";
   return p;
 }
 
@@ -42,3 +42,18 @@ void shell_cmd(const char *fmt, ...)
   system(cmd);
 }
 
+char *StrDup(const char *s)
+{
+  char *p = NULL;
+  if(!s)
+    return p;
+  p = (char *)malloc(strlen(s) + 1);
+  memcpy(p, s, strlen(s) + 1);
+  return p;
+}
+
+void StrFree(char *s)
+{
+  if(!s)
+    free(s);
+}

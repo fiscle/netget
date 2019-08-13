@@ -18,6 +18,7 @@ public:
   bool Init(AppProto *proto, int timeout);
   int Req(long len, long offset);
   long Res(char *write_ptr, long size, long *file_size);
+  long Res(Storer *storer, int block_index, long *file_size);
   long SingleExch(char *write_ptr, long size, long *file_size);
 private:
   AppProto *_proto;

@@ -21,21 +21,21 @@
 static char g_download_path[MAX_FILE_PATH] = "./download";
 
 // 文件名
-static char *get_file_name(char *file, char *buf, int size)
+static char *get_file_name(const char *file, char *buf, int size)
 {
   snprintf(buf, size, "%s/%s", g_download_path, file);
   return buf;
 }
 
 // 获取状态文件名称, 下载完成这个文件会被删除
-static char *get_state_file_name(char *file, char *buf, int size)
+static char *get_state_file_name(const char *file, char *buf, int size)
 {
   snprintf(buf, size, "%s/.state.%s~", g_download_path, file);
   return buf;
 }
 
 // 获取临时文件名称, 下载完成这个文件会更名为正式文件名
-static char *get_temp_file_name(char *file, char *buf, int size)
+static char *get_temp_file_name(const char *file, char *buf, int size)
 {
   snprintf(buf, size, "%s/%s~", g_download_path, file);
   return buf;
@@ -189,6 +189,7 @@ struct store_state_t *init_state_file(char *file_key, char *state_file_name, cha
 
   // 状态文件以这个file_key为标识，续传时用于区别不同文件
   memcpy(pstate->file_key, file_key, MAX_FILE_KEY_SIZE);
+  pstate->is_adjusted = 0;
   pstate->file_size = 0;
   pstate->curr_size = 0;
   pstate->block_num = 1;
@@ -210,7 +211,7 @@ Storer::~Storer()
   _LOCK_DEL();
 }
 
-bool Storer::Init(char *url, long block_size)
+bool Storer::Init(const char *url, long block_size)
 {
   char file_key[MAX_FILE_KEY_SIZE];
 
@@ -410,6 +411,9 @@ bool Storer::AdjustState(long file_size, long recv_size)
   int i = 0;
   if(!_state)
     return false;
+  
+  if(_state->is_adjusted)
+    return true;
 
   // reopen temp_file
   _state->temp_file_ptr = (char *)mmap_reopen(_state->temp_file_ptr, _file_size, _temp_file, file_size);
@@ -457,11 +461,21 @@ bool Storer::AdjustState(long file_size, long recv_size)
     _state->blocks[_state->block_num - 1].left = file_size - _state->block_size * (_state->block_num - 1);
   }
 
+  _state->is_adjusted = 1;
+
   mmap_sync_state_file(_state);
 
 
   return true;
 
+}
+
+bool Storer::IsAdjusted()
+{
+  if(_state)
+    return _state->is_adjusted;
+  else
+    return false;
 }
 
 char *Storer::GetFileName()
@@ -483,4 +497,5 @@ char *Storer::GetWritePtr(int thread_id)
   }
   return _state->temp_file_ptr + _state->blocks[thread_id].offset;
 }
+
 

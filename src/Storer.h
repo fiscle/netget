@@ -35,6 +35,7 @@ struct block_state_t
 // 下载状态
 struct store_state_t
 {
+  int is_adjusted;
   char file_key[MAX_FILE_KEY_SIZE];
   long file_size;
   long curr_size;
@@ -63,7 +64,7 @@ public:
   long GetBlockSize();
   bool IsAssigned();
   // 初化化状态
-  bool Init(char *url, long block_size = DEFAULT_BLOCK_SIZE);
+  bool Init(const char *url, long block_size = DEFAULT_BLOCK_SIZE);
   // 返回指定工作线程的写位置
   char *GetWritePtr(int thread_id);
   // 返回文件名 
@@ -72,6 +73,7 @@ public:
   void Done();
   // 同步内存到文件
   void Sync();
+  bool IsAdjusted();
 
 private:
   bool _is_ok;

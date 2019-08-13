@@ -19,6 +19,7 @@ OFILES = AppProto.o           \
          HttpProto.o          \
          AppProtoConnector.o  \
          MdAlg.o              \
+         Attr.o               \
          Storer.o
 MFILE  = Main.o
 HFILES = $(patsubst %.o,%.h,$(OFILES))

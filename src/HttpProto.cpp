@@ -20,9 +20,6 @@
 #define HTTP_MAX_PAYLOAD_SIZE (1024 * 1024 * 10)     // 默认一次最大小载10M
 #define HTTP_MAX_RES_HEADER_LEN DEFAULT_BLOCK_SIZE   // 响应报文最大长度，该值保证http header能接收完整.
 
-#define HTTP_PROTO_ATTR_AGENT         "agent"
-#define HTTP_PROTO_ATTR_VERSION       "version"
-
 #define HTTP_STATUS_STR(n) HTTP_PROTO_NAME STRING_OF(/)  \
               HTTP_DEFAULT_VERSION STRING_BLANK() STRING_OF(n)
 #define GET_HTTP_CONNECTOR(conns) (conns[0])   
@@ -85,12 +82,13 @@ static char *get_res_data_ptr(char *header)
   return endp + 4;
 }
 
-static int get_file_sizes_from_header(char *header, char *endp, long *file_size, long *off1, long *off2)
+int HttpProto::ParseHeader(char *header, char *endp, long *file_size, long *off1, long *off2)
 {
   char *status_200 = (char *)HTTP_STATUS_STR(200); 
   char *status_206 = (char *)HTTP_STATUS_STR(206);
   char *p;
 
+  // status 206
   if(strncmp(header, status_206, strlen(status_206)) == 0)
   {
     if((p = strstr(header, "Content-Range: bytes")) != NULL && p < endp)
@@ -114,6 +112,7 @@ static int get_file_sizes_from_header(char *header, char *endp, long *file_size,
       }
     }
   }
+  // status 200
   else if(strncmp(header, status_200, strlen(status_200)) == 0)
   {
     if((p = strstr(header, "Content-Length:")) != NULL && p < endp)
@@ -130,6 +129,7 @@ static int get_file_sizes_from_header(char *header, char *endp, long *file_size,
   else
   {
     p = header + (strlen(status_200) - 3); // point to status
+    // status 302
     if(strncmp(p, "302", 3) == 0)
     {
       if((p = strstr(header, "Location:")) != NULL && p < endp)
@@ -138,19 +138,118 @@ static int get_file_sizes_from_header(char *header, char *endp, long *file_size,
         /* 去掉可能存在的空格 */
         while(*p == ' ') ++p;
         endp = strstr(p, "\r\n");
-        void relocation_url_and_do_again(char *p, int len);
-        relocation_url_and_do_again(p, endp - p);
+        *endp = 0;
+        SetAttr((char *)HTTP_PROTO_ATTR_LOCATION, p);
         return ERROR_CODE_OF_RELOCATION;
       }
     }
-    ELOG("in get_file_sizes_from_header: state[%.3s] error!\n", p);
+    ELOG("in ParseHeader: state[%.3s] error!\n", p);
   }
 
-  ELOG("in get_file_sizes_from_header:: get file len error! header=[%.*s]\n", (int)(endp - header), header);
+  ELOG("in ParseHeader:: get file len error! header=[%.*s]\n", (int)(endp - header), header);
   return ERROR_CODE_OF_DATA;
 
 }
 
+long HttpProto::Res(Connector conns[], Storer *storer, int block_index, long *file_size)
+{
+  int ret;
+  long off1, off2, res_file_len, recv_file_len = 0;
+  char buf[HTTP_MAX_RES_HEADER_LEN+1], *pfile = NULL;
+  Connector &conn = GET_HTTP_CONNECTOR(conns);
+  char *write_ptr = storer->GetWritePtr(block_index);
+
+  if((ret = conn.Connect()) < 0)
+  {
+    ELOG("in HttpProto::Res:: conn fail!\n");
+    return ret;
+  }
+  
+  /* 读一个http的响应报文，首先默认是取固定的HTTP_MAX_RES_HEADER_LEN字节(保证能读完报文头)
+   *   分析读回来的数据，把文件内容区分开来，并从报文头获得本报中的文件内容长度 res_file_len
+   *   和文件的总长度。把文件内容写到 write_ptr 
+   */
+  long offset = 0;
+  while(1)
+  {
+    if((ret = conn.Recv(buf + offset, HTTP_MAX_RES_HEADER_LEN - offset)) < 0)
+    {
+       ELOG("in HttpProto::Res Recv!\n");
+       return ret;
+    }
+    else if(ret == 0)
+    {
+      ELOG("in HttpProto::Res Recv 0!\n");
+      return 0;
+    }
+    offset += ret;
+  
+    buf[offset] = 0;
+    if((pfile = get_res_data_ptr(buf)) == NULL)
+    {
+      if(offset >= HTTP_MAX_RES_HEADER_LEN)
+      {
+         ELOG("in HttpProto::Res get header!\n");
+         return ERROR_CODE_OF_DATA;
+      }
+      continue;
+    }
+    break;
+  }
+
+  if((ret = ParseHeader(buf, pfile, file_size, &off1, &off2)) < 0)
+  {
+    ELOG("in ::Res Recv ParseHeader ret = %d!\n", ret);
+    return ret;
+  }
+  
+  // 已经收的文件内容长度
+  recv_file_len = offset - (pfile - buf); 
+  // 会话报文中应该返回的文件长度
+  res_file_len = off2 - off1 + 1;
+
+  memcpy(write_ptr, pfile, recv_file_len);
+  storer->UpdateState(block_index, recv_file_len);
+
+  DLOG("sd[%d]::::RES1[%.*s]recv-len[%ld]!\n", conn.GetSd(), (int)(pfile - buf), buf, recv_file_len);
+
+  /* 第一次收报文本报中的文件内容就完成 */
+  if(recv_file_len == res_file_len)
+  {
+    DLOG("in ::Res Recv %ld ALL.\n", recv_file_len);
+    return recv_file_len;
+  }
+
+  /* 继续收HTTP请求中剩余的文件内容 */
+  offset = 0;
+  while(1)
+  {
+    if((ret = conn.Recv(write_ptr + recv_file_len + offset, res_file_len - recv_file_len - offset)) < 0)
+    {
+       ELOG("in HttpProto::Res Recv!\n");
+       return ret;
+    }
+    else if(ret == 0)
+    {
+      ELOG("in HttpProto::Res Recv 0.\n");
+      return 0;
+    }
+    offset += ret;
+    storer->UpdateState(block_index, ret);
+    if(offset == res_file_len - recv_file_len)
+    {
+      DLOG("sd[%d]::::RES2[...]recv-len[%ld]!\n",conn.GetSd(), offset);
+      return res_file_len;
+    }
+    if(offset > res_file_len - recv_file_len)
+    {
+      ELOG("in HttpProto::Res http exception.\n");
+      assert(true);
+    }
+    else
+      continue;
+  }
+}
 
 long HttpProto::Res(Connector conns[], char *write_ptr, long size, long *file_size)
 {
@@ -197,9 +296,9 @@ long HttpProto::Res(Connector conns[], char *write_ptr, long size, long *file_si
     break;
   }
 
-  if((ret = get_file_sizes_from_header(buf, pfile, file_size, &off1, &off2)) < 0)
+  if((ret = ParseHeader(buf, pfile, file_size, &off1, &off2)) < 0)
   {
-    ELOG("in ::Res Recv get_file_sizes_from_header ret = %d!\n", ret);
+    ELOG("in ::Res Recv ParseHeader ret = %d!\n", ret);
     return ret;
   }
   
@@ -281,6 +380,11 @@ int HttpProto::GetDefaultPort()
 const char *HttpProto::GetVersion()
 {
   return GetAttr((char *)HTTP_PROTO_ATTR_VERSION);
+}
+
+const char *HttpProto::GetLocation()
+{
+  return GetAttr((char *)HTTP_PROTO_ATTR_LOCATION);
 }
 
 const char *HttpProto::GetAgent()

@@ -11,6 +11,7 @@
 #include <map>
 #include <string>
 #include "Base.h"
+#include "Storer.h"
 #include "Connector.h"
 
 #define PROTO_IS_HTTP(url) (strncmp((url), "http://", strlen("http://")) == 0)
@@ -23,8 +24,8 @@ public:
   AppProto();
   virtual ~AppProto();
   // 初始化，把url解释为, http,host,path,port几部分内容
-  bool Init(char *ufl);
-  bool ReInit(char *ufl);
+  bool Init(const char *ufl);
+  bool ReInit(const char *ufl);
   void SetAttr(std::string name, std::string value);
   void SetAttr(char *name, char *value);
   const char *GetAttr(std::string name);
@@ -38,6 +39,7 @@ public:
   virtual int Req(Connector conns[], long len, long offset) = 0;
   // 报协议解释后的文件内容写到write_ptr位置
   virtual long Res(Connector conns[], char *write_ptr, long size, long *file_size) = 0;
+  virtual long Res(Connector conns[], Storer *storer, int block_index, long *file_size) = 0;
   // 执行一个交互
   virtual int SingleExch(Connector conn[], char *write_ptr, long size, long *file_size) = 0;
   // 返回协议名称

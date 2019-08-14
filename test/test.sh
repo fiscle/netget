@@ -6,5 +6,11 @@ do_test()
           --md5-url   https://www.apache.org/dist/httpd/mod_ftp/mod_ftp-0.9.6-beta.tar.bz2.md5
 }
 
+do_test_file()
+{
+  ./bin/dfile --file-url "file:///etc/passwd"
+}
+
 do_test
+do_test_file
 

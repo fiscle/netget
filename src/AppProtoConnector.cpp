@@ -7,10 +7,19 @@
 **********************************************/
 #include "AppProtoConnector.h"
 
+AppProtoConnector::AppProtoConnector()
+{
+  _conns = NULL;
+}
+AppProtoConnector::~AppProtoConnector()
+{
+  if(_conns)
+    delete [] _conns;
+}
 bool AppProtoConnector::Init(AppProto *proto, int timeout)
 {
   _proto = proto;
-  return _proto->InitConnector(_conns, timeout);
+  return _proto->InitConnector(&_conns, timeout);
 }
 
 int AppProtoConnector::Req(long len, long offset)

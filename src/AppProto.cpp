@@ -8,10 +8,6 @@
 
 #include "AppProto.h"
 
-#define APP_PROTO_ATTR_HOST "host"
-#define APP_PROTO_ATTR_PORT "port"
-#define APP_PROTO_ATTR_PATH "path"
-#define APP_PROTO_ATTR_PROTO "proto"
 
 AppProto::AppProto() { }
 AppProto::~AppProto() { }
@@ -55,6 +51,12 @@ static bool ParseUrl(char *url, char **proto, char **host, char **port, char **p
   if(strlen(p1) == 0)
     return false;
 
+  if(strcmp(*proto, "file") == 0)
+  {
+    *path = p1;
+    return true;
+  }
+
   // host
   *host = p1;
   if((p2 = strstr(p1, ":")) != NULL)
@@ -94,7 +96,10 @@ bool AppProto::Init(const char *url)
       return false;
     }
     SetAttr((char *)APP_PROTO_ATTR_PROTO, proto);
-    SetAttr((char *)APP_PROTO_ATTR_HOST, host);
+    if(host)
+    {
+      SetAttr((char *)APP_PROTO_ATTR_HOST, host);
+    }
     if(port)
     {
       SetAttr((char *)APP_PROTO_ATTR_PORT, port);
@@ -109,33 +114,7 @@ bool AppProto::Init(const char *url)
 
 bool AppProto::ReInit(const char *url)
 {
-  _attrs.clear();
+  ClearAttr();
   return Init(url);
-}
-
-void AppProto::SetAttr(std::string name, std::string value)
-{
-  _attrs.insert(std::make_pair(name, value));
-}
-
-void AppProto::SetAttr(char *name, char *value)
-{
-  _attrs.insert(std::make_pair(name, value));
-}
-const char *AppProto::GetAttr(char *name)
-{
-  return(_attrs[name].data());
-}
-const char *AppProto::GetAttr(std::string name)
-{
-  return(_attrs[name].data());
-}
-
-void AppProto::Dup(AppProto &src)
-{
-  std::map<std::string, std::string>::iterator iter;
-  _attrs.clear();
-  for (iter = src._attrs.begin(); iter != src._attrs.end(); ++iter)
-    _attrs.insert(std::make_pair(iter->first, iter->second));
 }
 

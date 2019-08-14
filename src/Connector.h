@@ -3,31 +3,29 @@
 * @Version: 1.0
 * @Date:    2019/08/01
 * @File:    Connector.h
-* @Desc:    tcp-socket连接通讯类
+* @Desc:    连接通讯类
 **********************************************/
 
 #ifndef _Connector_h
 #define _Connector_h
 
+#include "Attr.h"
 #define DEFAULT_TIMEOUT 10
 
-class Connector
+class Connector : public Attr
 {
 public:
   Connector();
-  ~Connector();
-  bool Init(const char *host, int port, int timeout = DEFAULT_TIMEOUT);
-  int Connect();
-  void DisConnect();
-  int Send(char *msg, int len);
-  int Recv(char *buf, int size);
-  int GetSd();
-
+  virtual ~Connector();
+  virtual int Connect() = 0;
+  virtual void DisConnect() = 0;
+  virtual int Send(char *msg, int len) = 0;
+  virtual int Recv(char *buf, int size) = 0;
+  virtual bool Init(int argc, char *argv[]) = 0;
+  int GetFd();
+  void SetFd(int fd);
 private:
-  int _port;
-  char _ip[64];
-  int _sd;
-  int _timeout;
+  int _fd;
 };
 
 #endif

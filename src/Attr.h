@@ -20,8 +20,14 @@ public:
   const char *GetAttr(std::string name);
   const char *GetAttr(char *name);
   void Dup(Attr &src);
+  void ClearAttr();
+  void SetIntAttr(char *name, int value);
+  int GetIntAttr(char *name);
+  void LoadAttrs(int argc, char **argv);
+  void DumpAttrs(char *buf, int size);
 private:
   std::map<std::string, std::string> _attrs;
+  std::map<std::string, int> _attri;
 };
 
 #endif

@@ -8,6 +8,7 @@
 
 #include "assert.h"
 #include "HttpProto.h"
+#include "TcpConnector.h"
 
 #define HTTP_DEFAULT_PORT 80                         // 默认端口
 #define HTTP_PROTO_NAME "HTTP"                       // 协议名称
@@ -47,7 +48,7 @@ int HttpProto::FormReq(long len, long offset, char *buf, int size)
         GetHost());
 }
 
-int HttpProto::Req(Connector conns[], long len, long offset)
+int HttpProto::Req(Connector *conns, long len, long offset)
 {
   int ret = 0;
   char buf[HTTP_MAX_BUF];
@@ -68,7 +69,7 @@ int HttpProto::Req(Connector conns[], long len, long offset)
      ELOG("in HttpProto::Req Send!\n");
      return ret;
   }
-  DLOG("sd[%d]::::REQ[%.*s]!\n", conn.GetSd(), ret, buf);
+  DLOG("sd[%d]::::REQ[%.*s]!\n", conn.GetFd(), ret, buf);
   return ret;
 }
 
@@ -151,7 +152,7 @@ int HttpProto::ParseHeader(char *header, char *endp, long *file_size, long *off1
 
 }
 
-long HttpProto::Res(Connector conns[], Storer *storer, int block_index, long *file_size)
+long HttpProto::Res(Connector *conns, Storer *storer, int block_index, long *file_size)
 {
   int ret;
   long off1, off2, res_file_len, recv_file_len = 0;
@@ -211,7 +212,7 @@ long HttpProto::Res(Connector conns[], Storer *storer, int block_index, long *fi
   memcpy(write_ptr, pfile, recv_file_len);
   storer->UpdateState(block_index, recv_file_len);
 
-  DLOG("sd[%d]::::RES1[%.*s]recv-len[%ld]!\n", conn.GetSd(), (int)(pfile - buf), buf, recv_file_len);
+  DLOG("sd[%d]::::RES1[%.*s]recv-len[%ld]!\n", conn.GetFd(), (int)(pfile - buf), buf, recv_file_len);
 
   /* 第一次收报文本报中的文件内容就完成 */
   if(recv_file_len == res_file_len)
@@ -238,7 +239,7 @@ long HttpProto::Res(Connector conns[], Storer *storer, int block_index, long *fi
     storer->UpdateState(block_index, ret);
     if(offset == res_file_len - recv_file_len)
     {
-      DLOG("sd[%d]::::RES2[...]recv-len[%ld]!\n",conn.GetSd(), offset);
+      DLOG("sd[%d]::::RES2[...]recv-len[%ld]!\n",conn.GetFd(), offset);
       return res_file_len;
     }
     if(offset > res_file_len - recv_file_len)
@@ -251,7 +252,7 @@ long HttpProto::Res(Connector conns[], Storer *storer, int block_index, long *fi
   }
 }
 
-long HttpProto::Res(Connector conns[], char *write_ptr, long size, long *file_size)
+long HttpProto::Res(Connector *conns, char *write_ptr, long size, long *file_size)
 {
   int ret;
   long off1, off2, res_file_len, recv_file_len = 0;
@@ -309,7 +310,7 @@ long HttpProto::Res(Connector conns[], char *write_ptr, long size, long *file_si
 
   memcpy(write_ptr, pfile, recv_file_len);
 
-  DLOG("sd[%d]::::RES1[%.*s]recv-len[%ld]!\n", conn.GetSd(), (int)(pfile - buf), buf, recv_file_len);
+  DLOG("sd[%d]::::RES1[%.*s]recv-len[%ld]!\n", conn.GetFd(), (int)(pfile - buf), buf, recv_file_len);
 
   /* 第一次收报文本报中的文件内容就完成 */
   if(recv_file_len == res_file_len)
@@ -335,7 +336,7 @@ long HttpProto::Res(Connector conns[], char *write_ptr, long size, long *file_si
     offset += ret;
     if(offset == res_file_len - recv_file_len)
     {
-      DLOG("sd[%d]::::RES2[...]recv-len[%ld]!\n",conn.GetSd(), offset);
+      DLOG("sd[%d]::::RES2[...]recv-len[%ld]!\n",conn.GetFd(), offset);
       return res_file_len;
     }
     if(offset > res_file_len - recv_file_len)
@@ -348,7 +349,7 @@ long HttpProto::Res(Connector conns[], char *write_ptr, long size, long *file_si
   }
 }
 
-int HttpProto::SingleExch(Connector conns[], char *write_ptr, long size, long *file_size)
+int HttpProto::SingleExch(Connector *conns, char *write_ptr, long size, long *file_size)
 {
   int ret;
   long status;
@@ -401,9 +402,26 @@ void HttpProto::SetAgent(char *value)
   SetAttr((char *)HTTP_PROTO_ATTR_AGENT, value);
 }
 
-bool HttpProto::InitConnector(Connector conns[], int timeout)
+bool HttpProto::InitConnector(Connector **conns, int timeout)
 {
-  Connector &conn = GET_HTTP_CONNECTOR(conns);
-  return conn.Init(GetHost(), GetPort(), timeout);
+  const int max_buf = 64, max_arg = 8;
+  int argc = 0, i = 0;
+  char *argv[max_arg];
+  char buf[max_arg][max_buf];
+
+  *conns = new TcpConnector[1];
+  snprintf(buf[argc++], max_buf, "--%s", TCPCONNECTOR_ATTR_HOST);
+  snprintf(buf[argc++], max_buf, "%s", GetHost());
+
+  snprintf(buf[argc++], max_buf, "++%s", TCPCONNECTOR_ATTR_PORT);
+  snprintf(buf[argc++], max_buf, "%d", GetPort());
+
+  snprintf(buf[argc++], max_buf, "++%s", TCPCONNECTOR_ATTR_TIMEOUT);
+  snprintf(buf[argc++], max_buf, "%d", timeout);
+
+  for(i = 0; i < argc; ++i)
+    argv[i] = buf[i];
+  
+  return (*conns)[0].Init(argc, argv);
 }
 

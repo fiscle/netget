@@ -38,6 +38,7 @@
 #define ERROR_CODE_OF_STORE_INIT                (ERROR_CODE_OFFSET - 14)
 #define ERROR_CODE_OF_ADJUST_STATE              (ERROR_CODE_OFFSET - 14)
 #define ERROR_CODE_OF_UPDATE_STATE              (ERROR_CODE_OFFSET - 14)
+#define ERROR_CODE_OF_FILE_OPEN                 (ERROR_CODE_OFFSET - 14)
 
 
 #define APPLICATION_NAME "download-file"
@@ -45,7 +46,7 @@
 
 
 // 日志级别 0-4 分别为: 不写,写错误,写警告,写INFO,写DEBUG
-#define DEBUG_LEVEL 4 // [ 0 - 4 ]              
+#define DEBUG_LEVEL 0 // [ 0 - 4 ]              
 
 
 #if DEBUG_LEVEL > 0

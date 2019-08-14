@@ -15,8 +15,11 @@ MV = mv
 OFILES = AppProto.o           \
          Base.o               \
          Connector.o          \
+         TcpConnector.o       \
+         FileConnector.o      \
          Downloader.o         \
          HttpProto.o          \
+         FileProto.o          \
          AppProtoConnector.o  \
          MdAlg.o              \
          Attr.o               \

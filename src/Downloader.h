@@ -17,7 +17,7 @@
 #define DOWNLOAD_ATTR_MD5_URL        "md5-url"
 #define DOWNLOAD_ATTR_SHA1_URL       "sha1-url"
 
-class Downloader : Attr
+class Downloader : public Attr
 {
 public:
   Downloader();
@@ -32,7 +32,6 @@ public:
 #define DOWNLOAD_STATUE_ERROR(ret)  ((ret) < 0)
   int Download();
   long Start();
-  void LoadAttrs(int argc, char **argv);
   const char *GetProtoAttr(char *name);
 private:
   void Done(const char *file_url, long file_size, int use_sec);

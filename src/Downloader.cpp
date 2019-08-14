@@ -11,6 +11,7 @@
 #include "Base.h"
 #include "AppProtoConnector.h"
 #include "HttpProto.h"
+#include "FileProto.h"
 #include "MdAlg.h"
 #include "Downloader.h"
 
@@ -55,7 +56,7 @@ static void *loader_work(void *p)
   AppProtoConnector conn;
   
   args->status = ERROR_CODE_OF_DEFAULT;
-  if(!conn.Init(args->proto, DEFAULT_TIMEOUT))
+  if(!conn.Init(args->proto))
   {
     ELOG("tid[%d] initConn fail!\n", args->tid);
     return NULL;
@@ -263,7 +264,7 @@ bool Downloader::CheckMd()
       return false;
     }
 
-    if(!conn.Init(_proto, DEFAULT_TIMEOUT))
+    if(!conn.Init(_proto))
     {
       ELOG("in check_md:: initConn fail!\n");
       return false;
@@ -308,7 +309,7 @@ bool Downloader::CheckMd()
       return false;
     }
 
-    if(!conn.Init(_proto, DEFAULT_TIMEOUT))
+    if(!conn.Init(_proto))
     {
       ELOG("in check_md:: initConn fail!\n");
       return false;
@@ -351,6 +352,10 @@ int Downloader::Download()
   if(PROTO_IS_HTTP(file_url))
   {
     _proto = new HttpProto;
+  }
+  else if(PROTO_IS_FILE(file_url))
+  {
+    _proto = new FileProto;
   }
   else
   {
@@ -395,20 +400,6 @@ void Downloader::Done(const char *file_url, long file_size, int use_sec)
 
   // 获取下载文件对应的md5/sha1等验证吗(如果有指定).
   CheckMd();
-}
-
-void Downloader::LoadAttrs(int argc, char **argv)
-{
-  int i = 0;
-  for(; i < argc; ++i)
-  {
-    if(argv[i][0] == '-' && argv[i][1] == '-' && 
-       argv[i][2] != '\0' && (i + 1) < argc)
-    {
-      SetAttr(argv[i] + 2, argv[i+1]);
-      ++i;
-    }
-  }
 }
 
 const char *Downloader::GetProtoAttr(char *name)

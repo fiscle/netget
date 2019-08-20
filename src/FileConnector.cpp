@@ -38,6 +38,12 @@ bool FileConnector::Init(int argc, char *argv[])
 
 void FileConnector::DisConnect()
 {
+  int fd = GetFd();
+  if(fd > 0)
+  {
+    close(fd);
+    SetFd(-1);
+  }
 }
 
 int FileConnector::Connect()
@@ -61,17 +67,26 @@ int FileConnector::Send(char *msg, int len)
 {
   int fd = GetFd();
   long file_offset;
+  long file_size;
+  
   if (!msg || fd < 0 || len < 0)
   {
     ELOG("in FileConnector::Recv arg error!!\n");
     return(ERROR_CODE_OF_ARG);
   }
   file_offset = *((long *) msg);
-  if(file_offset + len > GetIntAttr(FILECONNECTOR_ATTR_FILE_SIZE))
+  file_size = GetIntAttr(FILECONNECTOR_ATTR_FILE_SIZE);
+  if(file_offset > file_size)
   {
-    ELOG("FileConnector::Send set offset[%ld] + len(%d) too big! when filesize = [%d]\n", file_offset, len, GetIntAttr(FILECONNECTOR_ATTR_FILE_SIZE));
+    ELOG("FileConnector::Send set offset[%ld] too big! when filesize = [%d]\n", file_offset, file_size);
     return ERROR_CODE_OF_ARG;
   }
+
+  if(file_offset + len > file_size)
+  {
+    len = file_size - file_offset;
+  }
+
   SetIntAttr(FILECONNECTOR_ATTR_REQ_LEN, len);
   return lseek(fd, file_offset, SEEK_SET);
 }

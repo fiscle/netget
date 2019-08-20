@@ -269,6 +269,7 @@ int TcpConnector::Recv(char *buf, int size)
   if ((rc = recv(fd, buf, size, 0)) <= 0)
   {
     SetFd(-1);
+    // EAGAIN、EWOULDBLOCK、EINTR
     if ((errno != 108) && (errno != 104))
     {
       ELOG("in TcpConnector::Recv rc = %d error!!\n", rc);

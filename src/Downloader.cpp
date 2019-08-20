@@ -176,7 +176,7 @@ long Downloader::Start()
     for(tid = 0; tid < ds.block_num; ++tid)
     {
       // 本数据块已经完成
-      if(_storer.GetStoreState()->blocks[args->tid].left == 0)
+      if(_storer.GetStoreState()->blocks[tid].left == 0)
       {
         args[tid].tid = -1; 
         continue;
